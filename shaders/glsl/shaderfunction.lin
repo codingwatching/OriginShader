@@ -568,25 +568,6 @@ vec3 Diffuse_Lambert(vec3 BaseColor) {
     return (1.0 / MATH_PI) * BaseColor;
 }
 
-vec3 Diffuse_Gotanda(vec3 BaseColor, float Roughness, float NoV, float NoL, float VoH, float VoL) {
-    //[Gotanda 2014, "Designing Reflectance Models for New Consoles"]
-    const float F0_Gotanda = 0.04;
-
-    float Cosri = VoL - NoV * NoL;
-
-    float r2 = Roughness * Roughness;
-    float r4 = r2 * r2;
-    float r4_13 = r4 + 1.36053;
-
-    float Fr = (1.0 - (0.542026 * r4 + 0.303573 * r2) / r4_13) * (1.0 - pow(1.0 - NoV, 5.0 - 4.0 * r4) / r4_13) * ((-0.733996 * r4 * r2 + 1.50912 * r4 - 1.16402 * r2) * pow(1.0 - NoV, 1.0 + 1.0 / (39.0 * r4 * r4 + 1.0)) + 1.0);
-    float Lm = (max(1.0 - 2.0 * r2, 0.0) * (1.0 - pow5(1.0 - NoL)) + min(2.0 * r2, 1.0)) * (1.0 - 0.5 * r2 * (NoL - 1.0)) * NoL;
-    float Vd = (r4 / ((r4 + 0.09) * (1.31072 + 0.995584 * NoV))) * (1.0 - pow(1.0 - NoL, (1.0 - 0.3726732 * NoV * NoV) / (0.188566 + 0.38841 * NoV)));
-    float Bp = Cosri < 0.0 ? 1.4 * NoV * NoL * Cosri : Cosri;
-    float Lr = (21.0 / 20.0) * (1.0 - F0_Gotanda) * (Fr * Lm + Vd + Bp);
-
-    return BaseColor * (1.0 / MATH_PI) * Lr;
-}
-
 float D_GGX(float Roughness, float NoH) {
     //[Walter et al. 2007, "Microfacet models for refraction through rough surfaces"]
     float a = Roughness * Roughness;
@@ -639,11 +620,7 @@ vec3 scattering_BSDF(vec3 BaseColor) {
 }
 
 vec3 Diffuse_BRDF(vec3 BaseColor, float Roughness, float NoV, float NoL, float VoH, float VoL) {
-#if FAST_BSDF
     return Diffuse_Lambert(BaseColor);
-#else
-    return Diffuse_Gotanda(BaseColor, Roughness, NoV, NoL, VoH, VoL);
-#endif
 }
 
 vec3 Specular_BRDF(vec3 SpecularColor, float Roughness, float NoV, float NoL, float NoH, float VoH) {
@@ -715,18 +692,7 @@ vec3 getBRDF(vec3 BaseColor, vec3 SpecularColor, float Roughness, float NoV, flo
     float r2 = Roughness * Roughness;
     float r4 = r2 * r2;
 
-    const float F0_Gotanda = 0.04;
-
-    float NoV_NoL = NoV * NoL;
-    float Cosri = VoL - NoV_NoL;
-    float r4_13 = r4 + 1.36053;
-    float Fr = (1.0 - (0.542026 * r4 + 0.303573 * r2) / r4_13) * (1.0 - pow(1.0 - NoV, 5.0 - 4.0 * r4) / r4_13) * ((-0.733996 * r4 * r2 + 1.50912 * r4 - 1.16402 * r2) * pow(1.0 - NoV, 1.0 + 1.0 / (39.0 * r4 * r4 + 1.0)) + 1.0);
-    float Lm = (max(1.0 - 2.0 * r2, 0.0) * (1.0 - pow5(1.0 - NoL)) + min(2.0 * r2, 1.0)) * (1.0 - 0.5 * r2 * (NoL - 1.0)) * NoL;
-    float Vd = (r4 / ((r4 + 0.09) * (1.31072 + 0.995584 * NoV))) * (1.0 - pow(1.0 - NoL, (1.0 - 0.3726732 * NoV * NoV) / (0.188566 + 0.38841 * NoV)));
-    float Bp = Cosri < 0.0 ? 1.4 * NoV_NoL * Cosri : Cosri;
-    float Lr = (21.0 / 20.0) * (1.0 - F0_Gotanda) * (Fr * Lm + Vd + Bp);
-
-    vec3 diffuseBRDF = BaseColor * (1.0 / MATH_PI) * Lr;
+    vec3 diffuseBRDF = BaseColor * (1.0 / MATH_PI);
 
     float d = (NoH * r4 - NoH) * NoH + 1.0;
     float D = r4 / (MATH_PI * d * d);
